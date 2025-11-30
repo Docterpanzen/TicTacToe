@@ -1,0 +1,153 @@
+<div class="max-w-5xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
+
+  <!-- Linke Seite: Titel, Status, Reset -->
+  <aside class="w-full lg:w-64 flex flex-col gap-4">
+    <h2 class="text-2xl font-semibold tracking-tight">
+      Tic Tac Toe
+    </h2>
+
+    <div class="text-sm text-slate-300 space-y-1">
+      <div>
+        <span *ngIf="!globalWinner">
+          Aktueller Spieler:
+          <span
+            class="font-semibold"
+            [ngClass]="{
+              'text-sky-400': currentPlayer === 'X',
+              'text-rose-400': currentPlayer === 'O'
+            }"
+          >
+            {{ currentPlayer }}
+          </span>
+        </span>
+
+        <span *ngIf="globalWinner">
+          Spielende:
+          <span
+            *ngIf="globalWinner === 'Draw'"
+            class="font-semibold text-amber-300"
+          >
+            Unentschieden
+          </span>
+          <span
+            *ngIf="globalWinner === 'X' || globalWinner === 'O'"
+            class="font-semibold"
+            [ngClass]="{
+              'text-sky-400': globalWinner === 'X',
+              'text-rose-400': globalWinner === 'O'
+            }"
+          >
+            Spieler {{ globalWinner }} gewinnt!
+          </span>
+        </span>
+      </div>
+
+      <div class="text-[0.7rem] uppercase tracking-wide text-slate-500">
+        <span *ngIf="!globalWinner">
+          Nächstes Brett:
+          <span class="font-semibold text-slate-200">
+            {{ nextAllowedBoard === null ? 'Beliebig' : nextAllowedBoard + 1 }}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      (click)="resetGame()"
+      class="px-4 py-1.5 rounded-full border border-emerald-400/70
+             bg-slate-900/90 text-[0.75rem] tracking-[0.18em] uppercase
+             shadow-lg shadow-emerald-500/30
+             hover:bg-emerald-500/15 hover:border-emerald-200 hover:shadow-emerald-400/60
+             transition self-start"
+    >
+      Reset
+    </button>
+
+    <p
+      *ngIf="lastMoveDescription"
+      class="text-[0.7rem] text-slate-500 italic"
+    >
+      {{ lastMoveDescription }}
+    </p>
+  </aside>
+
+  <!-- Rechte Seite: Board -->
+  <main class="flex-1 flex justify-center items-start">
+  <div
+    class="bg-slate-950/80 p-4 rounded-3xl border border-slate-800 shadow-inner"
+    style="
+      width: min(70vw, 80vh);
+      height: min(70vw, 80vh);
+    "
+  >
+    <div class="w-full h-full grid grid-cols-3 gap-3">
+      <!-- kleine Boards -->
+      <div
+        *ngFor="let board of boards; let bi = index"
+        class="relative rounded-2xl border-2 p-1.5 transition flex flex-col
+               justify-center aspect-square"
+        [ngClass]="{
+          'border-emerald-400 shadow-lg shadow-emerald-500/30': isBoardActive(bi),
+          'border-slate-700': !isBoardActive(bi),
+          'opacity-40': boardWinners[bi] && !isBoardActive(bi) && !globalWinner
+        }"
+      >
+        <div class="grid grid-cols-3 gap-1.5 w-full h-full">
+          <button
+            *ngFor="let cell of board; let ci = index"
+            type="button"
+            class="w-full h-full rounded-xl border border-slate-700/70 flex items-center
+                   justify-center text-2xl font-bold hover:bg-slate-800/80 
+                   hover:border-slate-500 transition disabled:opacity-40"
+            [disabled]="
+              !!globalWinner ||
+              !!boardWinners[bi] ||
+              cell !== null ||
+              (nextAllowedBoard !== null && nextAllowedBoard !== bi)
+            "
+            (click)="handleCellClick(bi, ci)"
+          >
+            <span
+              *ngIf="cell"
+              [ngClass]="{
+                'text-sky-400': cell === 'X',
+                'text-rose-400': cell === 'O'
+              }"
+            >
+              {{ cell }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Winner Overlay -->
+        <div
+          *ngIf="boardWinners[bi]"
+          class="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <ng-container *ngIf="boardWinners[bi] === 'X' || boardWinners[bi] === 'O'; else drawBoard">
+            <div
+              class="text-5xl font-extrabold drop-shadow"
+              [ngClass]="{
+                'text-sky-500/70': boardWinners[bi] === 'X',
+                'text-rose-500/70': boardWinners[bi] === 'O'
+              }"
+            >
+              {{ boardWinners[bi] }}
+            </div>
+          </ng-container>
+
+          <ng-template #drawBoard>
+            <div
+              class="text-xs px-2 py-1 rounded-full bg-slate-900/80 border border-slate-600 text-slate-200"
+            >
+              Unentschieden
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+</div>
