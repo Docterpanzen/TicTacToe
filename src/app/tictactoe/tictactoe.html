@@ -97,9 +97,10 @@
           <button
             *ngFor="let cell of board; let ci = index"
             type="button"
-            class="w-full h-full rounded-xl border border-slate-700/70 flex items-center
-                   justify-center text-2xl font-bold hover:bg-slate-800/80 
-                   hover:border-slate-500 transition disabled:opacity-40"
+            class="relative w-full aspect-square rounded-xl border border-slate-700/70
+       grid place-items-center overflow-hidden
+       hover:bg-slate-800/80 hover:border-slate-500
+       transition disabled:opacity-40"
             [disabled]="
               !!globalWinner ||
               !!boardWinners[bi] ||
