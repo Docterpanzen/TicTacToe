@@ -2,7 +2,8 @@
   "name": "tictactoe",
   "version": "0.0.0",
   "scripts": {
-    "start": "ng serve -o"
+    "start": "ng serve -o",
+    "build": "ng build"
   },
   "prettier": {
     "printWidth": 100,
