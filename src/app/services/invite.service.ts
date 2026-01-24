@@ -12,6 +12,8 @@ export interface Invite {
   created_at: string;
   from_username: string;
   to_username: string;
+  from_public_id?: string;
+  to_public_id?: string;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -27,7 +27,7 @@ export class LoginComponent {
   private readonly passwordHasLower = /[a-z]/;
   private readonly passwordHasUpper = /[A-Z]/;
   private readonly passwordHasSpecial = /[^A-Za-z0-9]/;
-  private readonly usernamePattern = /^[a-z0-9_]+$/i;
+  private readonly usernamePattern = /^[a-z0-9][a-z0-9_]*$/i;
 
   get isRegisterMode(): boolean {
     return this.mode === 'register';
@@ -136,7 +136,7 @@ export class LoginComponent {
     }
 
     if (!this.usernamePattern.test(this.username.trim())) {
-      return 'Benutzername darf nur Buchstaben, Zahlen und Unterstrich enthalten.';
+      return 'Benutzername muss mit Buchstabe/Zahl beginnen und darf nur Buchstaben, Zahlen und Unterstrich enthalten.';
     }
 
     if (this.username.trim().toLowerCase() === 'admin') {
@@ -169,7 +169,7 @@ export class LoginComponent {
         return 'Benutzername muss mindestens 3 Zeichen lang sein.';
       }
       if (apiError === 'username_invalid') {
-        return 'Benutzername darf nur Buchstaben, Zahlen und Unterstrich enthalten.';
+        return 'Benutzername muss mit Buchstabe/Zahl beginnen und darf nur Buchstaben, Zahlen und Unterstrich enthalten.';
       }
       if (apiError === 'username_reserved') {
         return 'Benutzername ist nicht erlaubt.';

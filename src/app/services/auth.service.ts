@@ -7,17 +7,20 @@ export interface AuthUser {
   id: number;
   username: string;
   isAdmin?: boolean;
+  publicId?: string;
 }
 
 export interface UserSummary {
   id: number;
   username: string;
+  publicId?: string;
 }
 
 export interface AdminUser {
   id: number;
   username: string;
   isAdmin: boolean;
+  publicId?: string;
   createdAt: string;
 }
 

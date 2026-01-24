@@ -23,6 +23,7 @@ export class LobbyComponent implements OnInit {
   searchResults: UserSummary[] = [];
   busy = false;
   searchBusy = false;
+  private searchTimeout?: ReturnType<typeof setTimeout>;
 
   constructor(
     private auth: AuthService,
@@ -61,6 +62,19 @@ export class LobbyComponent implements OnInit {
     } finally {
       this.searchBusy = false;
     }
+  }
+
+  onSearchChange(): void {
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+    if (!this.searchQuery.trim()) {
+      this.searchResults = [];
+      return;
+    }
+    this.searchTimeout = setTimeout(() => {
+      void this.searchUsers();
+    }, 250);
   }
 
   async invite(user: UserSummary): Promise<void> {

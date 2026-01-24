@@ -49,6 +49,7 @@ const initDb = async () => {
       username TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       is_admin INTEGER NOT NULL DEFAULT 0,
+      public_id TEXT UNIQUE,
       created_at TEXT NOT NULL
     )
   `);
@@ -58,6 +59,14 @@ const initDb = async () => {
   } catch {
     // ignore if column already exists
   }
+
+  try {
+    await run('ALTER TABLE users ADD COLUMN public_id TEXT');
+  } catch {
+    // ignore if column already exists
+  }
+
+  await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_id ON users(public_id)');
 
   await run(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -126,7 +135,7 @@ const getPasswordIssues = (password) => {
 
 const usernameRules = {
   minLength: 3,
-  pattern: /^[a-z0-9_]+$/i,
+  pattern: /^[a-z0-9][a-z0-9_]*$/i,
   reserved: ['admin'],
 };
 
@@ -136,6 +145,15 @@ const getUsernameIssue = (username) => {
   if (!usernameRules.pattern.test(normalized)) return 'username_invalid';
   if (usernameRules.reserved.includes(normalized)) return 'username_reserved';
   return null;
+};
+
+const createPublicId = async () => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const value = String(Math.floor(1000 + Math.random() * 9000));
+    const existing = await get('SELECT id FROM users WHERE public_id = ?', [value]);
+    if (!existing) return value;
+  }
+  throw new Error('public_id_generation_failed');
 };
 
 const createInitialState = (hostUserId) => ({
@@ -236,26 +254,44 @@ const ensureAdminUser = async () => {
   }
 
   const hash = await bcrypt.hash(adminPassword, 10);
-  const existingUser = await get('SELECT id, is_admin FROM users WHERE username = ?', [adminUsername]);
+  const existingUser = await get(
+    'SELECT id, is_admin, public_id FROM users WHERE username = ?',
+    [adminUsername]
+  );
   if (existingUser) {
+    const publicId = existingUser.public_id || (await createPublicId());
     await run('UPDATE users SET is_admin = 1, password_hash = ? WHERE id = ?', [
       hash,
       existingUser.id,
     ]);
+    if (!existingUser.public_id) {
+      await run('UPDATE users SET public_id = ? WHERE id = ?', [publicId, existingUser.id]);
+    }
     console.log(`Admin user promoted: ${adminUsername}`);
     return;
   }
 
   try {
+    const publicId = await createPublicId();
     await run(
-      'INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?)',
-      [adminUsername, hash, 1, nowIso()]
+      'INSERT INTO users (username, password_hash, is_admin, public_id, created_at) VALUES (?, ?, ?, ?, ?)',
+      [adminUsername, hash, 1, publicId, nowIso()]
     );
     console.log(`Admin user created: ${adminUsername}`);
   } catch (err) {
     if (!String(err.message || '').includes('UNIQUE')) {
       console.error('Failed to create admin user', err);
     }
+  }
+};
+
+const ensurePublicIds = async () => {
+  const users = await all(
+    'SELECT id FROM users WHERE public_id IS NULL OR public_id = ""'
+  );
+  for (const user of users) {
+    const publicId = await createPublicId();
+    await run('UPDATE users SET public_id = ? WHERE id = ?', [publicId, user.id]);
   }
 };
 
@@ -273,10 +309,11 @@ app.post('/api/register', async (req, res) => {
   }
 
   try {
+    const publicId = await createPublicId();
     const hash = await bcrypt.hash(String(password), 10);
     await run(
-      'INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?)',
-      [normalized, hash, 0, nowIso()]
+      'INSERT INTO users (username, password_hash, is_admin, public_id, created_at) VALUES (?, ?, ?, ?, ?)',
+      [normalized, hash, 0, publicId, nowIso()]
     );
     return res.json({ ok: true });
   } catch (err) {
@@ -342,20 +379,29 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 app.get('/api/me', requireAuth, async (req, res) => {
-  const user = await get('SELECT id, username, is_admin FROM users WHERE id = ?', [req.userId]);
+  const user = await get(
+    'SELECT id, username, is_admin, public_id FROM users WHERE id = ?',
+    [req.userId]
+  );
   if (!user) return res.status(404).json({ error: 'user_not_found' });
-  return res.json({ id: user.id, username: user.username, isAdmin: !!user.is_admin });
+  return res.json({
+    id: user.id,
+    username: user.username,
+    isAdmin: !!user.is_admin,
+    publicId: user.public_id,
+  });
 });
 
 app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   const users = await all(
-    'SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC'
+    'SELECT id, username, is_admin, public_id, created_at FROM users ORDER BY created_at DESC'
   );
   return res.json({
     users: (users || []).map((user) => ({
       id: user.id,
       username: user.username,
       isAdmin: !!user.is_admin,
+      publicId: user.public_id,
       createdAt: user.created_at,
     })),
   });
@@ -383,15 +429,31 @@ app.get('/api/users/search', requireAuth, async (req, res) => {
   if (!query) return res.json({ users: [] });
 
   const limit = 10;
+  const isPublic = query.startsWith('#');
+  const publicId = isPublic ? query.slice(1) : '';
   const isId = /^\d+$/.test(query);
-  const sql = isId
-    ? 'SELECT id, username FROM users WHERE id = ? LIMIT ?'
-    : 'SELECT id, username FROM users WHERE username LIKE ? ORDER BY username LIMIT ?';
-  const params = isId ? [Number(query), limit] : [`%${query}%`, limit];
+
+  let sql = 'SELECT id, username, public_id FROM users WHERE username LIKE ? ORDER BY username LIMIT ?';
+  let params = [`%${query}%`, limit];
+
+  if (isPublic) {
+    if (!/^\d{4}$/.test(publicId)) return res.json({ users: [] });
+    sql = 'SELECT id, username, public_id FROM users WHERE public_id = ? LIMIT ?';
+    params = [publicId, limit];
+  } else if (isId) {
+    sql = 'SELECT id, username, public_id FROM users WHERE id = ? LIMIT ?';
+    params = [Number(query), limit];
+  }
 
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: 'server_error' });
-    return res.json({ users: rows || [] });
+    return res.json({
+      users: (rows || []).map((user) => ({
+        id: user.id,
+        username: user.username,
+        publicId: user.public_id,
+      })),
+    });
   });
 });
 
@@ -415,7 +477,9 @@ app.get('/api/invites', requireAuth, async (req, res) => {
       invites.status,
       invites.created_at,
       fu.username AS from_username,
-      tu.username AS to_username
+      tu.username AS to_username,
+      fu.public_id AS from_public_id,
+      tu.public_id AS to_public_id
     FROM invites
     JOIN users fu ON fu.id = invites.from_user_id
     JOIN users tu ON tu.id = invites.to_user_id
@@ -708,6 +772,9 @@ wss.on('connection', async (ws, req) => {
 });
 
 initDb()
+  .then(() => {
+    return ensurePublicIds();
+  })
   .then(() => {
     return ensureAdminUser();
   })

@@ -19,7 +19,7 @@
         <div class="flex-1">
           <div class="text-base font-semibold text-slate-100">
             {{ user.username }}
-            <span class="text-slate-500 text-sm">#{{ user.id }}</span>
+            <span class="text-slate-500 text-sm">#{{ user.publicId ?? user.id }}</span>
           </div>
           <div class="text-[0.7rem] uppercase tracking-[0.18em] text-slate-500">
             {{ user.isAdmin ? 'Admin' : 'Spieler' }}
@@ -160,24 +160,16 @@
         <input
           class="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs"
           [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
           placeholder="z.B. 12 oder spieler"
         />
-        <button
-          type="button"
-          (click)="searchUsers()"
-          class="px-3 py-2 rounded-lg border border-slate-700 text-xs
-                 hover:border-slate-400 transition"
-          [disabled]="searchBusy"
-        >
-          Suchen
-        </button>
       </div>
 
       <div class="mt-3 space-y-2 text-xs text-slate-300">
         <div *ngFor="let result of searchResults" class="flex items-center justify-between gap-2">
           <div>
             <span class="font-semibold">{{ result.username }}</span>
-            <span class="text-slate-500">#{{ result.id }}</span>
+            <span class="text-slate-500">#{{ result.publicId ?? result.id }}</span>
           </div>
           <button
             type="button"

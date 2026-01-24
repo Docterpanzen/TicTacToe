@@ -38,6 +38,7 @@ export class Tictactoe {
   searchQuery = '';
   searchResults: UserSummary[] = [];
   searchBusy = false;
+  private searchTimeout?: ReturnType<typeof setTimeout>;
 
   constructor(private auth: AuthService, private router: Router) {
     this.user$ = this.auth.user$;
@@ -64,6 +65,19 @@ export class Tictactoe {
     } finally {
       this.searchBusy = false;
     }
+  }
+
+  onSearchChange(): void {
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+    if (!this.searchQuery.trim()) {
+      this.searchResults = [];
+      return;
+    }
+    this.searchTimeout = setTimeout(() => {
+      void this.searchUsers();
+    }, 250);
   }
 
   challenge(user: UserSummary): void {

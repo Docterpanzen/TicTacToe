@@ -25,7 +25,7 @@
           Benutzername mindestens 3 Zeichen.
         </div>
         <div [ngClass]="usernameInvalid ? 'text-rose-400' : (username.trim().length ? 'text-emerald-400' : 'text-slate-500')">
-          Nur Buchstaben, Zahlen und Unterstrich.
+          Muss mit Buchstabe/Zahl beginnen; nur Buchstaben, Zahlen und Unterstrich.
         </div>
         <div [ngClass]="usernameReserved ? 'text-rose-400' : (username.trim().length ? 'text-emerald-400' : 'text-slate-500')">
           "admin" ist nicht erlaubt.
