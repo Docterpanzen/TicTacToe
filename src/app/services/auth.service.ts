@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { buildApiUrl } from './api-base';
 
 export interface AuthUser {
   id: number;
@@ -28,7 +29,7 @@ export class AuthService {
     if (!this.token) return;
     try {
       const user = await firstValueFrom(
-        this.http.get<AuthUser>('/api/me', {
+        this.http.get<AuthUser>(buildApiUrl('/api/me'), {
           headers: this.authHeaders(),
         })
       );
@@ -40,13 +41,13 @@ export class AuthService {
 
   async register(username: string, password: string): Promise<void> {
     await firstValueFrom(
-      this.http.post('/api/register', { username, password })
+      this.http.post(buildApiUrl('/api/register'), { username, password })
     );
   }
 
   async login(username: string, password: string): Promise<void> {
     const result = await firstValueFrom(
-      this.http.post<{ token: string }>('/api/login', { username, password })
+      this.http.post<{ token: string }>(buildApiUrl('/api/login'), { username, password })
     );
     localStorage.setItem(this.tokenKey, result.token);
     await this.init();
@@ -55,7 +56,7 @@ export class AuthService {
   async logout(): Promise<void> {
     try {
       await firstValueFrom(
-        this.http.post('/api/logout', {}, { headers: this.authHeaders() })
+        this.http.post(buildApiUrl('/api/logout'), {}, { headers: this.authHeaders() })
       );
     } finally {
       this.clearSession();
@@ -66,7 +67,7 @@ export class AuthService {
     const trimmed = query.trim();
     if (!trimmed) return [];
     const result = await firstValueFrom(
-      this.http.get<{ users: UserSummary[] }>('/api/users/search', {
+      this.http.get<{ users: UserSummary[] }>(buildApiUrl('/api/users/search'), {
         headers: this.authHeaders(),
         params: { q: trimmed },
       })

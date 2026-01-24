@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
+import { buildApiUrl } from './api-base';
 
 export interface Invite {
   id: number;
@@ -19,7 +20,7 @@ export class InviteService {
 
   async listInvites(): Promise<Invite[]> {
     const result = await firstValueFrom(
-      this.http.get<{ invites: Invite[] }>('/api/invites', {
+      this.http.get<{ invites: Invite[] }>(buildApiUrl('/api/invites'), {
         headers: this.authHeaders(),
       })
     );
@@ -28,20 +29,24 @@ export class InviteService {
 
   async createInvite(toUserId: number): Promise<void> {
     await firstValueFrom(
-      this.http.post('/api/invites', { toUserId }, { headers: this.authHeaders() })
+      this.http.post(buildApiUrl('/api/invites'), { toUserId }, { headers: this.authHeaders() })
     );
   }
 
   async cancelInvite(inviteId: number): Promise<void> {
     await firstValueFrom(
-      this.http.post(`/api/invites/${inviteId}/cancel`, {}, { headers: this.authHeaders() })
+      this.http.post(
+        buildApiUrl(`/api/invites/${inviteId}/cancel`),
+        {},
+        { headers: this.authHeaders() }
+      )
     );
   }
 
   async acceptInvite(inviteId: number): Promise<{ gameId: number }> {
     const result = await firstValueFrom(
       this.http.post<{ gameId: number }>(
-        `/api/invites/${inviteId}/accept`,
+        buildApiUrl(`/api/invites/${inviteId}/accept`),
         {},
         { headers: this.authHeaders() }
       )

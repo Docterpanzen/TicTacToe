@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
+import { resolveWsBaseUrl } from './api-base';
 
 @Injectable({ providedIn: 'root' })
 export class WsService {
@@ -11,8 +12,8 @@ export class WsService {
       return this.messages.asObservable();
     }
 
-    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${protocol}://${location.host}/ws?token=${encodeURIComponent(token)}`;
+    const baseUrl = resolveWsBaseUrl();
+    const url = `${baseUrl}/ws?token=${encodeURIComponent(token)}`;
     this.socket = new WebSocket(url);
 
     this.socket.onmessage = (event) => {

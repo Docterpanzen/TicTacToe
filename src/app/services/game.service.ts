@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
+import { buildApiUrl } from './api-base';
 
 export type PlayerSymbol = 'X' | 'O';
 export type Cell = PlayerSymbol | null;
@@ -41,7 +42,7 @@ export class GameService {
 
   async getGame(gameId: number): Promise<GameResponse> {
     return await firstValueFrom(
-      this.http.get<GameResponse>(`/api/games/${gameId}`, {
+      this.http.get<GameResponse>(buildApiUrl(`/api/games/${gameId}`), {
         headers: this.authHeaders(),
       })
     );
@@ -49,7 +50,7 @@ export class GameService {
 
   async listGames(): Promise<ShareableGame[]> {
     const result = await firstValueFrom(
-      this.http.get<{ games: ShareableGame[] }>('/api/games', {
+      this.http.get<{ games: ShareableGame[] }>(buildApiUrl('/api/games'), {
         headers: this.authHeaders(),
       })
     );
@@ -58,7 +59,7 @@ export class GameService {
 
   async deleteGame(gameId: number): Promise<void> {
     await firstValueFrom(
-      this.http.delete(`/api/games/${gameId}`, {
+      this.http.delete(buildApiUrl(`/api/games/${gameId}`), {
         headers: this.authHeaders(),
       })
     );
@@ -67,7 +68,7 @@ export class GameService {
   async makeMove(gameId: number, boardIndex: number, cellIndex: number): Promise<GameResponse> {
     return await firstValueFrom(
       this.http.post<GameResponse>(
-        `/api/games/${gameId}/move`,
+        buildApiUrl(`/api/games/${gameId}/move`),
         { boardIndex, cellIndex },
         { headers: this.authHeaders() }
       )
