@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { AuthService, AuthUser, UserSummary } from '../services/auth.service';
 import { Invite, InviteService } from '../services/invite.service';
+import { GameService, ShareableGame } from '../services/game.service';
 import { WsService } from '../services/ws.service';
 
 @Component({
@@ -17,6 +18,7 @@ import { WsService } from '../services/ws.service';
 export class LobbyComponent implements OnInit {
   user$!: Observable<AuthUser | null>;
   invites: Invite[] = [];
+  games: ShareableGame[] = [];
   searchQuery = '';
   searchResults: UserSummary[] = [];
   busy = false;
@@ -26,6 +28,7 @@ export class LobbyComponent implements OnInit {
     private auth: AuthService,
     private inviteService: InviteService,
     private ws: WsService,
+    private gameService: GameService,
     private router: Router,
     private destroyRef: DestroyRef
   ) {
@@ -39,11 +42,16 @@ export class LobbyComponent implements OnInit {
         if (!user || !this.auth.token) return;
         this.connectSocket(this.auth.token);
         void this.loadInvites();
+        void this.loadGames();
       });
   }
 
   async loadInvites(): Promise<void> {
     this.invites = await this.inviteService.listInvites();
+  }
+
+  async loadGames(): Promise<void> {
+    this.games = await this.gameService.listGames();
   }
 
   async searchUsers(): Promise<void> {
@@ -85,6 +93,10 @@ export class LobbyComponent implements OnInit {
     }
   }
 
+  async openGame(gameId: number): Promise<void> {
+    await this.router.navigateByUrl(`/game/${gameId}`);
+  }
+
   async logout(): Promise<void> {
     await this.auth.logout();
     await this.router.navigateByUrl('/login');
@@ -105,6 +117,9 @@ export class LobbyComponent implements OnInit {
       .subscribe((msg) => {
         if (msg?.type === 'invites:update') {
           void this.loadInvites();
+        }
+        if (msg?.type === 'game:update') {
+          void this.loadGames();
         }
       });
   }

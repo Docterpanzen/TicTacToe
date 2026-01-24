@@ -27,6 +27,14 @@ export interface GameResponse {
   state: GameState;
 }
 
+export interface ShareableGame {
+  id: number;
+  status: 'active' | 'finished';
+  updatedAt: string;
+  host: GameUser;
+  guest: GameUser;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GameService {
   constructor(private http: HttpClient, private auth: AuthService) {}
@@ -37,6 +45,15 @@ export class GameService {
         headers: this.authHeaders(),
       })
     );
+  }
+
+  async listGames(): Promise<ShareableGame[]> {
+    const result = await firstValueFrom(
+      this.http.get<{ games: ShareableGame[] }>('/api/games', {
+        headers: this.authHeaders(),
+      })
+    );
+    return result.games || [];
   }
 
   async makeMove(gameId: number, boardIndex: number, cellIndex: number): Promise<GameResponse> {

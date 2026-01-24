@@ -389,6 +389,39 @@ app.get('/api/games/:id', requireAuth, async (req, res) => {
   });
 });
 
+app.get('/api/games', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const rows = await all(
+    `
+    SELECT
+      games.id,
+      games.status,
+      games.updated_at,
+      games.host_user_id,
+      games.guest_user_id,
+      hu.username AS host_username,
+      gu.username AS guest_username
+    FROM games
+    JOIN users hu ON hu.id = games.host_user_id
+    JOIN users gu ON gu.id = games.guest_user_id
+    WHERE (games.host_user_id = ? OR games.guest_user_id = ?)
+      AND games.status IN ('active', 'finished')
+    ORDER BY games.updated_at DESC
+    `,
+    [userId, userId]
+  );
+
+  const games = rows.map((game) => ({
+    id: game.id,
+    status: game.status,
+    updatedAt: game.updated_at,
+    host: { id: game.host_user_id, username: game.host_username },
+    guest: { id: game.guest_user_id, username: game.guest_username },
+  }));
+
+  return res.json({ games });
+});
+
 app.post('/api/games/:id/move', requireAuth, async (req, res) => {
   const gameId = Number(req.params.id);
   const { boardIndex, cellIndex } = req.body || {};
