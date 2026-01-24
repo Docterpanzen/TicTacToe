@@ -6,6 +6,39 @@
       Tic Tac Toe
     </h2>
 
+    <div *ngIf="user$ | async as user; else guest" class="text-xs text-slate-300 space-y-2">
+      <div class="uppercase tracking-wide text-slate-500">Angemeldet</div>
+      <div class="text-sm">
+        <span class="font-semibold text-slate-100">{{ user.username }}</span>
+        <span class="text-slate-500">#{{ user.id }}</span>
+      </div>
+      <button
+        type="button"
+        (click)="logout()"
+        class="px-3 py-1 rounded-full border border-rose-400/70
+               bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
+               hover:bg-rose-500/15 hover:border-rose-200
+               transition"
+      >
+        Abmelden
+      </button>
+    </div>
+
+    <ng-template #guest>
+      <div class="text-xs text-slate-400 space-y-2">
+        <div class="uppercase tracking-wide text-slate-500">Nicht angemeldet</div>
+        <button
+          type="button"
+          (click)="goToLogin()"
+          class="px-3 py-1 rounded-full border border-slate-600
+                 bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
+                 hover:border-slate-300 transition"
+        >
+          Login
+        </button>
+      </div>
+    </ng-template>
+
     <div class="text-sm text-slate-300 space-y-1">
       <div>
         <span *ngIf="!globalWinner">
@@ -63,6 +96,49 @@
     >
       Reset
     </button>
+
+    <div class="mt-6" *ngIf="user$ | async">
+      <div class="text-[0.7rem] uppercase tracking-wide text-slate-500">
+        Spieler finden (ID oder Name)
+      </div>
+      <div class="mt-2 flex gap-2">
+        <input
+          class="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs"
+          [(ngModel)]="searchQuery"
+          placeholder="z.B. 12 oder spieler"
+        />
+        <button
+          type="button"
+          (click)="searchUsers()"
+          class="px-3 py-2 rounded-lg border border-slate-700 text-xs
+                 hover:border-slate-400 transition"
+          [disabled]="searchBusy"
+        >
+          Suchen
+        </button>
+      </div>
+
+      <div class="mt-3 space-y-2 text-xs text-slate-300">
+        <div *ngFor="let result of searchResults" class="flex items-center justify-between gap-2">
+          <div>
+            <span class="font-semibold">{{ result.username }}</span>
+            <span class="text-slate-500">#{{ result.id }}</span>
+          </div>
+          <button
+            type="button"
+            (click)="challenge(result)"
+            class="px-2.5 py-1 rounded-full border border-emerald-500/70
+                   text-[0.65rem] uppercase tracking-[0.16em]
+                   hover:border-emerald-300 hover:bg-emerald-500/10 transition"
+          >
+            Herausfordern
+          </button>
+        </div>
+        <div *ngIf="searchResults.length === 0 && searchQuery">
+          Keine Treffer.
+        </div>
+      </div>
+    </div>
 
     <p
       *ngIf="lastMoveDescription"

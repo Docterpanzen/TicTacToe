@@ -1,5 +1,9 @@
 import { Component } from '@angular/core';
-import { NgFor, NgIf, NgClass } from '@angular/common';
+import { NgFor, NgIf, NgClass, AsyncPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
+import { AuthService, AuthUser, UserSummary } from '../services/auth.service';
 
 type Player = 'X' | 'O';
 type Cell = Player | null;
@@ -8,7 +12,7 @@ type BoardWinner = Player | 'Draw' | null;
 @Component({
   selector: 'app-tictactoe',
   standalone: true,
-  imports: [NgFor, NgIf, NgClass],
+  imports: [NgFor, NgIf, NgClass, AsyncPipe, FormsModule],
   templateUrl: './tictactoe.html',
   styleUrl: './tictactoe.scss',
 })
@@ -30,8 +34,37 @@ export class Tictactoe {
 
   lastMoveDescription = '';
 
-  constructor() {
+  user$!: Observable<AuthUser | null>;
+  searchQuery = '';
+  searchResults: UserSummary[] = [];
+  searchBusy = false;
+
+  constructor(private auth: AuthService, private router: Router) {
+    this.user$ = this.auth.user$;
     this.resetGame();
+  }
+
+  async logout(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigateByUrl('/login');
+  }
+
+  async goToLogin(): Promise<void> {
+    await this.router.navigateByUrl('/login');
+  }
+
+  async searchUsers(): Promise<void> {
+    this.searchBusy = true;
+    try {
+      this.searchResults = await this.auth.searchUsers(this.searchQuery);
+    } finally {
+      this.searchBusy = false;
+    }
+  }
+
+  challenge(user: UserSummary): void {
+    // Multiplayer not implemented yet; this is a placeholder for the flow.
+    alert(`Herausforderung an ${user.username} (#${user.id}) wird bald unterstützt.`);
   }
 
   resetGame(): void {
