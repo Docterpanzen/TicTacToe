@@ -3,12 +3,34 @@
     <aside class="w-full lg:w-72 flex flex-col gap-4">
       <h2 class="text-2xl font-semibold tracking-tight">Lobby</h2>
 
-      <div *ngIf="user$ | async as user" class="text-xs text-slate-300 space-y-2">
+      <div *ngIf="user$ | async as user" class="text-xs text-slate-300 space-y-3">
         <div class="uppercase tracking-wide text-slate-500">Angemeldet</div>
-        <div class="text-sm">
-          <span class="font-semibold text-slate-100">{{ user.username }}</span>
-          <span class="text-slate-500">#{{ user.id }}</span>
+
+        <div class="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 px-3 py-3">
+          <div
+            class="h-11 w-11 rounded-2xl grid place-items-center text-lg font-bold
+                   bg-slate-800/70 text-slate-100"
+          >
+            {{ user.username.charAt(0).toUpperCase() }}
+          </div>
+          <div class="flex-1">
+            <div class="text-base font-semibold text-slate-100">
+              {{ user.username }}
+              <span class="text-slate-500 text-sm">#{{ user.id }}</span>
+            </div>
+            <div class="text-[0.7rem] uppercase tracking-[0.18em] text-slate-500">
+              {{ user.isAdmin ? 'Admin' : 'Spieler' }}
+            </div>
+          </div>
+          <span
+            *ngIf="user.isAdmin"
+            class="rounded-full border border-amber-400/70 bg-amber-500/10 px-2 py-0.5 text-[0.6rem]
+                   uppercase tracking-[0.16em] text-amber-200"
+          >
+            Admin
+          </span>
         </div>
+
         <div class="flex gap-2">
           <button
             type="button"
