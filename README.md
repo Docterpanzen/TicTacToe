@@ -1,59 +1,44 @@
-# Tictactoe
+# Ultimate Tic‑Tac‑Toe
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.9.
+Standalone Angular 20 app with a lightweight Node.js + SQLite backend. It supports local play and a multiplayer lobby with invitations. Multiplayer games persist in SQLite and can be reopened later.
 
-## Development server
+## Pages
+- Local game: /local
+- Login/Register: /login
+- Lobby (invites + active games): /lobby
+- Multiplayer match: /game/:id
 
-To start a local development server, run:
+## User management (current)
+- Username/password registration and login.
+- Session token stored in localStorage.
+- Authenticated API calls use Authorization: Bearer <token>.
+- Users are searchable by ID or username.
 
+## Multiplayer flow (current)
+- Invite another user from the lobby search.
+- Invitee can accept; a game is created and appears under Active games.
+- Game is opened only when you click Öffnen.
+- Live updates use WebSockets for invite and game updates.
+
+## Project layout
+- Angular app: src/
+- Backend: server/ (see server details in [server/README.md](server/README.md))
+
+## Development
+Frontend (Angular):
 ```bash
-ng serve
+npm install
+npm run start
+```
+The dev server uses proxy.conf.json to forward /api and /ws to the backend.
+
+Backend (Node + SQLite):
+```bash
+cd server
+npm install
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Notes
+- The local game UI stays unchanged; multiplayer uses the same board layout but shows player names.
+- Board highlight: green if it is your turn, yellow if it is not.

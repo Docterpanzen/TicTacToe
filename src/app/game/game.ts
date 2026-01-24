@@ -1,5 +1,5 @@
 import { Component, DestroyRef, OnInit } from '@angular/core';
-import { NgFor, NgIf, NgClass, AsyncPipe } from '@angular/common';
+import { NgFor, NgIf, NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
@@ -10,7 +10,7 @@ import { WsService } from '../services/ws.service';
 @Component({
   selector: 'app-game',
   standalone: true,
-  imports: [NgFor, NgIf, NgClass, AsyncPipe],
+  imports: [NgFor, NgIf, NgClass],
   templateUrl: './game.html',
 })
 export class GameComponent implements OnInit {
