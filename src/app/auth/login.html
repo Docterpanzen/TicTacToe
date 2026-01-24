@@ -20,13 +20,17 @@
         />
       </label>
 
-      <p
-        *ngIf="isRegisterMode"
-        class="text-[0.7rem]"
-        [ngClass]="usernameTooShort ? 'text-rose-400' : 'text-emerald-400'"
-      >
-        Benutzername mindestens 3 Zeichen.
-      </p>
+      <div *ngIf="isRegisterMode" class="text-[0.7rem] space-y-1">
+        <div [ngClass]="usernameTooShort ? 'text-rose-400' : (username.trim().length ? 'text-emerald-400' : 'text-slate-500')">
+          Benutzername mindestens 3 Zeichen.
+        </div>
+        <div [ngClass]="usernameInvalid ? 'text-rose-400' : (username.trim().length ? 'text-emerald-400' : 'text-slate-500')">
+          Nur Buchstaben, Zahlen und Unterstrich.
+        </div>
+        <div [ngClass]="usernameReserved ? 'text-rose-400' : (username.trim().length ? 'text-emerald-400' : 'text-slate-500')">
+          "admin" ist nicht erlaubt.
+        </div>
+      </div>
 
       <label class="block text-xs uppercase tracking-widest text-slate-400">
         Passwort
@@ -73,11 +77,49 @@
       {{ mode === 'login' ? 'Noch kein Konto? Registrieren' : 'Bereits registriert? Anmelden' }}
     </button>
 
-    <a
-      class="mt-3 block w-full text-center text-[0.7rem] text-slate-500 hover:text-slate-200"
-      routerLink="/local"
-    >
-      Als Gast weiterspielen
-    </a>
+    <div class="mt-3 flex items-center justify-between text-[0.7rem] text-slate-500">
+      <a class="hover:text-slate-200" routerLink="/local">Als Gast weiterspielen</a>
+      <button type="button" class="hover:text-amber-200" (click)="toggleAdmin()">
+        Admin
+      </button>
+    </div>
+
+    <div *ngIf="showAdmin" class="mt-6 border-t border-slate-800 pt-4">
+      <div class="text-[0.7rem] uppercase tracking-wide text-slate-500">Als Admin anmelden</div>
+      <form class="mt-3 space-y-3" (ngSubmit)="submitAdmin()">
+        <label class="block text-xs uppercase tracking-widest text-slate-400">
+          Admin Benutzername
+          <input
+            class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm"
+            name="adminUsername"
+            [(ngModel)]="adminUsername"
+            autocomplete="username"
+          />
+        </label>
+
+        <label class="block text-xs uppercase tracking-widest text-slate-400">
+          Admin Passwort
+          <input
+            class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm"
+            type="password"
+            name="adminPassword"
+            [(ngModel)]="adminPassword"
+            autocomplete="current-password"
+          />
+        </label>
+
+        <div *ngIf="adminError" class="text-xs text-rose-400">
+          {{ adminError }}
+        </div>
+
+        <button
+          type="submit"
+          class="w-full rounded-lg border border-amber-400/70 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:border-amber-300 disabled:opacity-50"
+          [disabled]="busy"
+        >
+          Admin anmelden
+        </button>
+      </form>
+    </div>
   </div>
 </div>

@@ -6,11 +6,19 @@ import { buildApiUrl } from './api-base';
 export interface AuthUser {
   id: number;
   username: string;
+  isAdmin?: boolean;
 }
 
 export interface UserSummary {
   id: number;
   username: string;
+}
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  isAdmin: boolean;
+  createdAt: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -53,6 +61,14 @@ export class AuthService {
     await this.init();
   }
 
+  async adminLogin(username: string, password: string): Promise<void> {
+    const result = await firstValueFrom(
+      this.http.post<{ token: string }>(buildApiUrl('/api/admin/login'), { username, password })
+    );
+    localStorage.setItem(this.tokenKey, result.token);
+    await this.init();
+  }
+
   async logout(): Promise<void> {
     try {
       await firstValueFrom(
@@ -73,6 +89,23 @@ export class AuthService {
       })
     );
     return result.users || [];
+  }
+
+  async listUsers(): Promise<AdminUser[]> {
+    const result = await firstValueFrom(
+      this.http.get<{ users: AdminUser[] }>(buildApiUrl('/api/admin/users'), {
+        headers: this.authHeaders(),
+      })
+    );
+    return result.users || [];
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(buildApiUrl(`/api/admin/users/${userId}`), {
+        headers: this.authHeaders(),
+      })
+    );
   }
 
   private authHeaders(): HttpHeaders {

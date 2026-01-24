@@ -1,7 +1,7 @@
 import { Component, DestroyRef, OnInit } from '@angular/core';
 import { NgFor, NgIf, AsyncPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { AuthService, AuthUser, UserSummary } from '../services/auth.service';
@@ -12,7 +12,7 @@ import { WsService } from '../services/ws.service';
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [NgFor, NgIf, AsyncPipe, FormsModule, DatePipe],
+  imports: [NgFor, NgIf, AsyncPipe, FormsModule, DatePipe, RouterLink],
   templateUrl: './lobby.html',
 })
 export class LobbyComponent implements OnInit {

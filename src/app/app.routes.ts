@@ -3,11 +3,13 @@ import { LoginComponent } from './auth/login';
 import { Tictactoe } from './tictactoe/tictactoe';
 import { LobbyComponent } from './lobby/lobby';
 import { GameComponent } from './game/game';
+import { AdminComponent } from './admin/admin';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'local' },
 	{ path: 'login', component: LoginComponent },
 	{ path: 'lobby', component: LobbyComponent },
+	{ path: 'admin', component: AdminComponent },
 	{ path: 'game/:id', component: GameComponent },
 	{ path: 'local', component: Tictactoe },
 	{ path: '**', redirectTo: 'local' },

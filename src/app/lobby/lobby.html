@@ -20,6 +20,16 @@
             Lokales Spiel
           </button>
           <button
+            *ngIf="user.isAdmin"
+            type="button"
+            routerLink="/admin"
+            class="px-3 py-1 rounded-full border border-amber-400/70
+                   bg-amber-500/10 text-[0.7rem] tracking-[0.16em] uppercase
+                   text-amber-200 hover:border-amber-300 transition"
+          >
+            Admin
+          </button>
+          <button
             type="button"
             (click)="logout()"
             class="px-3 py-1 rounded-full border border-rose-400/70

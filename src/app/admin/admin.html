@@ -1,0 +1,55 @@
+<div class="min-h-screen w-full bg-slate-950 text-slate-100">
+  <div class="max-w-5xl mx-auto flex flex-col gap-6 p-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-semibold tracking-tight">Admin</h2>
+      <a
+        class="px-3 py-1 rounded-full border border-slate-600 bg-slate-900/90 text-[0.7rem]
+               tracking-[0.16em] uppercase hover:border-slate-300 transition"
+        routerLink="/lobby"
+      >
+        Lobby
+      </a>
+    </div>
+
+    <section class="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+      <div class="text-[0.7rem] uppercase tracking-wide text-slate-500">Benutzerverwaltung</div>
+
+      <div *ngIf="error" class="mt-3 text-xs text-rose-400">
+        {{ error }}
+      </div>
+
+      <div class="mt-3 space-y-2 text-xs text-slate-300">
+        <div
+          *ngFor="let user of users"
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-2"
+        >
+          <div>
+            <div class="text-sm font-semibold">
+              {{ user.username }}
+              <span class="text-slate-500">#{{ user.id }}</span>
+              <span
+                *ngIf="user.isAdmin"
+                class="ml-2 rounded-full border border-amber-400/70 bg-amber-500/10 px-2 py-0.5 text-[0.6rem] uppercase tracking-[0.16em] text-amber-200"
+              >
+                Admin
+              </span>
+            </div>
+            <div class="text-[0.7rem] text-slate-500">{{ user.createdAt | date: 'short' }}</div>
+          </div>
+
+          <button
+            type="button"
+            (click)="deleteUser(user)"
+            class="px-2.5 py-1 rounded-full border border-rose-500/70 text-[0.65rem] uppercase tracking-[0.16em]
+                   hover:border-rose-300 hover:bg-rose-500/10 transition"
+            [disabled]="busy || user.isAdmin"
+          >
+            Löschen
+          </button>
+        </div>
+
+        <div *ngIf="users.length === 0" class="text-slate-500">Keine Benutzer.</div>
+      </div>
+    </section>
+  </div>
+</div>

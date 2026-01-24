@@ -48,9 +48,16 @@ const initDb = async () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      is_admin INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     )
   `);
+
+  try {
+    await run('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    // ignore if column already exists
+  }
 
   await run(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -115,6 +122,20 @@ const getPasswordIssues = (password) => {
   if (!passwordRules.hasUpper.test(String(password))) issues.push('password_missing_upper');
   if (!passwordRules.hasSpecial.test(String(password))) issues.push('password_missing_special');
   return issues;
+};
+
+const usernameRules = {
+  minLength: 3,
+  pattern: /^[a-z0-9_]+$/i,
+  reserved: ['admin'],
+};
+
+const getUsernameIssue = (username) => {
+  const normalized = String(username).trim().toLowerCase();
+  if (normalized.length < usernameRules.minLength) return 'username_too_short';
+  if (!usernameRules.pattern.test(normalized)) return 'username_invalid';
+  if (usernameRules.reserved.includes(normalized)) return 'username_reserved';
+  return null;
 };
 
 const createInitialState = (hostUserId) => ({
@@ -195,12 +216,56 @@ const requireAuth = async (req, res, next) => {
   return next();
 };
 
+const requireAdmin = async (req, res, next) => {
+  const user = await get('SELECT is_admin FROM users WHERE id = ?', [req.userId]);
+  if (!user || !user.is_admin) return res.status(403).json({ error: 'forbidden' });
+  return next();
+};
+
+const ensureAdminUser = async () => {
+  const existingAdmin = await get('SELECT id FROM users WHERE is_admin = 1 LIMIT 1');
+  if (existingAdmin) return;
+
+  const adminUsername = String(process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+  const adminPassword = String(process.env.ADMIN_PASSWORD || 'Admin!1234');
+
+  const passwordIssues = getPasswordIssues(adminPassword);
+  if (passwordIssues.length > 0) {
+    console.warn('Admin password does not meet policy; admin user not created.');
+    return;
+  }
+
+  const hash = await bcrypt.hash(adminPassword, 10);
+  const existingUser = await get('SELECT id, is_admin FROM users WHERE username = ?', [adminUsername]);
+  if (existingUser) {
+    await run('UPDATE users SET is_admin = 1, password_hash = ? WHERE id = ?', [
+      hash,
+      existingUser.id,
+    ]);
+    console.log(`Admin user promoted: ${adminUsername}`);
+    return;
+  }
+
+  try {
+    await run(
+      'INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?)',
+      [adminUsername, hash, 1, nowIso()]
+    );
+    console.log(`Admin user created: ${adminUsername}`);
+  } catch (err) {
+    if (!String(err.message || '').includes('UNIQUE')) {
+      console.error('Failed to create admin user', err);
+    }
+  }
+};
+
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'missing_fields' });
 
   const normalized = String(username).trim().toLowerCase();
-  if (normalized.length < 3) return res.status(400).json({ error: 'username_too_short' });
+  const usernameIssue = getUsernameIssue(username);
+  if (usernameIssue) return res.status(400).json({ error: usernameIssue });
 
   const passwordIssues = getPasswordIssues(password);
   if (passwordIssues.length > 0) {
@@ -210,8 +275,8 @@ app.post('/api/register', async (req, res) => {
   try {
     const hash = await bcrypt.hash(String(password), 10);
     await run(
-      'INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)',
-      [normalized, hash, nowIso()]
+      'INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?)',
+      [normalized, hash, 0, nowIso()]
     );
     return res.json({ ok: true });
   } catch (err) {
@@ -248,10 +313,68 @@ app.post('/api/login', async (req, res) => {
   return res.json({ token });
 });
 
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'missing_fields' });
+
+  const normalized = String(username).trim().toLowerCase();
+  const user = await get(
+    'SELECT id, password_hash, is_admin FROM users WHERE username = ?',
+    [normalized]
+  );
+  if (!user) return res.status(401).json({ error: 'invalid_credentials' });
+  if (!user.is_admin) return res.status(403).json({ error: 'admin_only' });
+
+  const ok = await bcrypt.compare(String(password), user.password_hash);
+  if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+
+  const token = createToken();
+  const expires = new Date();
+  expires.setDate(expires.getDate() + 7);
+
+  await run(
+    'INSERT INTO sessions (user_id, token, created_at, expires_at) VALUES (?, ?, ?, ?)',
+    [user.id, token, nowIso(), expires.toISOString()]
+  );
+
+  return res.json({ token });
+});
+
 app.get('/api/me', requireAuth, async (req, res) => {
-  const user = await get('SELECT id, username FROM users WHERE id = ?', [req.userId]);
+  const user = await get('SELECT id, username, is_admin FROM users WHERE id = ?', [req.userId]);
   if (!user) return res.status(404).json({ error: 'user_not_found' });
-  return res.json({ id: user.id, username: user.username });
+  return res.json({ id: user.id, username: user.username, isAdmin: !!user.is_admin });
+});
+
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  const users = await all(
+    'SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC'
+  );
+  return res.json({
+    users: (users || []).map((user) => ({
+      id: user.id,
+      username: user.username,
+      isAdmin: !!user.is_admin,
+      createdAt: user.created_at,
+    })),
+  });
+});
+
+app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isFinite(targetId)) return res.status(400).json({ error: 'invalid_user' });
+  if (targetId === req.userId) return res.status(400).json({ error: 'cannot_delete_self' });
+
+  const target = await get('SELECT id, is_admin FROM users WHERE id = ?', [targetId]);
+  if (!target) return res.status(404).json({ error: 'user_not_found' });
+  if (target.is_admin) return res.status(400).json({ error: 'cannot_delete_admin' });
+
+  await run('DELETE FROM sessions WHERE user_id = ?', [targetId]);
+  await run('DELETE FROM invites WHERE from_user_id = ? OR to_user_id = ?', [targetId, targetId]);
+  await run('DELETE FROM games WHERE host_user_id = ? OR guest_user_id = ?', [targetId, targetId]);
+  await run('DELETE FROM users WHERE id = ?', [targetId]);
+
+  return res.json({ ok: true });
 });
 
 app.get('/api/users/search', requireAuth, async (req, res) => {
@@ -584,6 +707,9 @@ wss.on('connection', async (ws, req) => {
 });
 
 initDb()
+  .then(() => {
+    return ensureAdminUser();
+  })
   .then(() => {
     server.listen(PORT, () => {
       console.log(`API listening on :${PORT}`);
