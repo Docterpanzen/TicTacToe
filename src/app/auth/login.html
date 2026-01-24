@@ -20,6 +20,14 @@
         />
       </label>
 
+      <p
+        *ngIf="isRegisterMode"
+        class="text-[0.7rem]"
+        [ngClass]="usernameTooShort ? 'text-rose-400' : 'text-emerald-400'"
+      >
+        Benutzername mindestens 3 Zeichen.
+      </p>
+
       <label class="block text-xs uppercase tracking-widest text-slate-400">
         Passwort
         <input
@@ -31,6 +39,18 @@
           required
         />
       </label>
+
+      <div *ngIf="isRegisterMode" class="text-[0.7rem] space-y-1">
+        <div [ngClass]="passwordTooShort ? 'text-rose-400' : (password.length ? 'text-emerald-400' : 'text-slate-500')">
+          Mindestens 8 Zeichen.
+        </div>
+        <div [ngClass]="passwordMissingSpecial ? 'text-rose-400' : (password.length ? 'text-emerald-400' : 'text-slate-500')">
+          Mindestens ein Sonderzeichen.
+        </div>
+        <div [ngClass]="passwordMissingUpperOrLower ? 'text-rose-400' : (password.length ? 'text-emerald-400' : 'text-slate-500')">
+          Mindestens ein Groß- und ein Kleinbuchstabe.
+        </div>
+      </div>
 
       <div *ngIf="error" class="text-xs text-rose-400">
         {{ error }}

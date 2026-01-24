@@ -101,6 +101,22 @@ app.use(
 const createToken = () => crypto.randomBytes(24).toString('hex');
 const nowIso = () => new Date().toISOString();
 
+const passwordRules = {
+  minLength: 8,
+  hasLower: /[a-z]/,
+  hasUpper: /[A-Z]/,
+  hasSpecial: /[^A-Za-z0-9]/,
+};
+
+const getPasswordIssues = (password) => {
+  const issues = [];
+  if (String(password).length < passwordRules.minLength) issues.push('password_too_short');
+  if (!passwordRules.hasLower.test(String(password))) issues.push('password_missing_lower');
+  if (!passwordRules.hasUpper.test(String(password))) issues.push('password_missing_upper');
+  if (!passwordRules.hasSpecial.test(String(password))) issues.push('password_missing_special');
+  return issues;
+};
+
 const createInitialState = (hostUserId) => ({
   boards: Array.from({ length: 9 }, () => Array(9).fill(null)),
   boardWinners: Array(9).fill(null),
@@ -185,7 +201,11 @@ app.post('/api/register', async (req, res) => {
 
   const normalized = String(username).trim().toLowerCase();
   if (normalized.length < 3) return res.status(400).json({ error: 'username_too_short' });
-  if (String(password).length < 4) return res.status(400).json({ error: 'password_too_short' });
+
+  const passwordIssues = getPasswordIssues(password);
+  if (passwordIssues.length > 0) {
+    return res.status(400).json({ error: 'password_invalid', details: passwordIssues });
+  }
 
   try {
     const hash = await bcrypt.hash(String(password), 10);
