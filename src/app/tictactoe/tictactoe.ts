@@ -49,6 +49,10 @@ export class Tictactoe {
     await this.router.navigateByUrl('/login');
   }
 
+  async goToLobby(): Promise<void> {
+    await this.router.navigateByUrl('/lobby');
+  }
+
   async goToLogin(): Promise<void> {
     await this.router.navigateByUrl('/login');
   }

@@ -12,16 +12,35 @@
         <span class="font-semibold text-slate-100">{{ user.username }}</span>
         <span class="text-slate-500">#{{ user.id }}</span>
       </div>
-      <button
-        type="button"
-        (click)="logout()"
-        class="px-3 py-1 rounded-full border border-rose-400/70
-               bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
-               hover:bg-rose-500/15 hover:border-rose-200
-               transition"
-      >
-        Abmelden
-      </button>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="px-3 py-1 rounded-full border border-emerald-500/70
+                 bg-emerald-500/10 text-[0.7rem] tracking-[0.16em] uppercase
+                 text-emerald-200"
+          disabled
+        >
+          Lokal
+        </button>
+        <button
+          (click)="goToLobby()"
+          class="px-3 py-1 rounded-full border border-slate-600
+                 bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
+                 hover:border-slate-300 transition"
+        >
+          Lobby
+        </button>
+        <button
+          type="button"
+          (click)="logout()"
+          class="px-3 py-1 rounded-full border border-rose-400/70
+                 bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
+                 hover:bg-rose-500/15 hover:border-rose-200
+                 transition"
+        >
+          Abmelden
+        </button>
+      </div>
     </div>
 
     <ng-template #guest>
