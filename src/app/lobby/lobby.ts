@@ -78,8 +78,8 @@ export class LobbyComponent implements OnInit {
   async accept(invite: Invite): Promise<void> {
     this.busy = true;
     try {
-      await this.inviteService.acceptInvite(invite.id);
-      await this.router.navigateByUrl('/local');
+      const result = await this.inviteService.acceptInvite(invite.id);
+      await this.router.navigateByUrl(`/game/${result.gameId}`);
     } finally {
       this.busy = false;
     }

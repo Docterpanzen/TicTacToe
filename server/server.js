@@ -74,6 +74,20 @@ const initDb = async () => {
       FOREIGN KEY (to_user_id) REFERENCES users(id)
     )
   `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS games (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      host_user_id INTEGER NOT NULL,
+      guest_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      state_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (host_user_id) REFERENCES users(id),
+      FOREIGN KEY (guest_user_id) REFERENCES users(id)
+    )
+  `);
 };
 
 app.use(express.json());
@@ -86,6 +100,53 @@ app.use(
 
 const createToken = () => crypto.randomBytes(24).toString('hex');
 const nowIso = () => new Date().toISOString();
+
+const createInitialState = (hostUserId) => ({
+  boards: Array.from({ length: 9 }, () => Array(9).fill(null)),
+  boardWinners: Array(9).fill(null),
+  currentPlayerId: hostUserId,
+  globalWinner: null,
+  nextAllowedBoard: null,
+});
+
+const checkBoardWinner = (board) => {
+  const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+
+  for (const [a, b, c] of lines) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return board[a];
+    }
+  }
+
+  if (board.every((c) => c !== null)) {
+    return 'Draw';
+  }
+
+  return null;
+};
+
+const checkGlobalWinner = (boardWinners) => {
+  const miniBoard = boardWinners.map((w) => (w === 'X' || w === 'O' ? w : null));
+  const win = checkBoardWinner(miniBoard);
+
+  if (win === 'Draw') {
+    if (boardWinners.every((w) => w)) {
+      return 'Draw';
+    }
+    return null;
+  }
+
+  return win;
+};
 
 const socketsByUser = new Map();
 
@@ -273,9 +334,145 @@ app.post('/api/invites/:id/accept', requireAuth, async (req, res) => {
   if (invite.status !== 'pending') return res.status(400).json({ error: 'not_pending' });
 
   await run('UPDATE invites SET status = ? WHERE id = ?', ['accepted', inviteId]);
+
+  const createdAt = nowIso();
+  const state = createInitialState(invite.from_user_id);
+  const result = await run(
+    'INSERT INTO games (host_user_id, guest_user_id, status, state_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [
+      invite.from_user_id,
+      invite.to_user_id,
+      'active',
+      JSON.stringify(state),
+      createdAt,
+      createdAt,
+    ]
+  );
+
   sendToUser(invite.from_user_id, { type: 'invites:update' });
   sendToUser(invite.to_user_id, { type: 'invites:update' });
-  return res.json({ ok: true });
+  sendToUser(invite.from_user_id, { type: 'game:update', gameId: result.lastID });
+  sendToUser(invite.to_user_id, { type: 'game:update', gameId: result.lastID });
+
+  return res.json({ gameId: result.lastID });
+});
+
+app.get('/api/games/:id', requireAuth, async (req, res) => {
+  const gameId = Number(req.params.id);
+  const game = await get(
+    `
+    SELECT
+      games.id,
+      games.host_user_id,
+      games.guest_user_id,
+      games.status,
+      games.state_json,
+      hu.username AS host_username,
+      gu.username AS guest_username
+    FROM games
+    JOIN users hu ON hu.id = games.host_user_id
+    JOIN users gu ON gu.id = games.guest_user_id
+    WHERE games.id = ?
+    `,
+    [gameId]
+  );
+  if (!game) return res.status(404).json({ error: 'game_not_found' });
+  if (game.host_user_id !== req.userId && game.guest_user_id !== req.userId) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+
+  return res.json({
+    id: game.id,
+    host: { id: game.host_user_id, username: game.host_username },
+    guest: { id: game.guest_user_id, username: game.guest_username },
+    state: JSON.parse(game.state_json),
+  });
+});
+
+app.post('/api/games/:id/move', requireAuth, async (req, res) => {
+  const gameId = Number(req.params.id);
+  const { boardIndex, cellIndex } = req.body || {};
+  if (!Number.isInteger(boardIndex) || !Number.isInteger(cellIndex)) {
+    return res.status(400).json({ error: 'invalid_move' });
+  }
+
+  const game = await get(
+    `
+    SELECT
+      games.id,
+      games.host_user_id,
+      games.guest_user_id,
+      games.status,
+      games.state_json,
+      hu.username AS host_username,
+      gu.username AS guest_username
+    FROM games
+    JOIN users hu ON hu.id = games.host_user_id
+    JOIN users gu ON gu.id = games.guest_user_id
+    WHERE games.id = ?
+    `,
+    [gameId]
+  );
+  if (!game) return res.status(404).json({ error: 'game_not_found' });
+  if (game.host_user_id !== req.userId && game.guest_user_id !== req.userId) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  if (game.status !== 'active') return res.status(400).json({ error: 'game_inactive' });
+
+  const state = JSON.parse(game.state_json);
+  if (state.globalWinner) return res.status(400).json({ error: 'game_over' });
+  if (state.currentPlayerId !== req.userId) return res.status(400).json({ error: 'not_your_turn' });
+
+  if (state.nextAllowedBoard !== null && state.nextAllowedBoard !== boardIndex) {
+    return res.status(400).json({ error: 'wrong_board' });
+  }
+
+  const board = state.boards[boardIndex];
+  if (!board || board[cellIndex] !== null) {
+    return res.status(400).json({ error: 'invalid_cell' });
+  }
+
+  const symbol = req.userId === game.host_user_id ? 'X' : 'O';
+  board[cellIndex] = symbol;
+
+  const localWin = checkBoardWinner(board);
+  if (localWin) {
+    state.boardWinners[boardIndex] = localWin;
+  }
+
+  state.globalWinner = checkGlobalWinner(state.boardWinners);
+
+  if (!state.globalWinner) {
+    const targetBoardIndex = cellIndex;
+    const targetWinner = state.boardWinners[targetBoardIndex];
+    const targetBoard = state.boards[targetBoardIndex];
+
+    if (!targetWinner && targetBoard.some((cell) => cell === null)) {
+      state.nextAllowedBoard = targetBoardIndex;
+    } else {
+      state.nextAllowedBoard = null;
+    }
+
+    state.currentPlayerId =
+      state.currentPlayerId === game.host_user_id ? game.guest_user_id : game.host_user_id;
+  }
+
+  const updatedAt = nowIso();
+  const newStatus = state.globalWinner ? 'finished' : 'active';
+  await run(
+    'UPDATE games SET state_json = ?, status = ?, updated_at = ? WHERE id = ?',
+    [JSON.stringify(state), newStatus, updatedAt, gameId]
+  );
+
+  sendToUser(game.host_user_id, { type: 'game:update', gameId });
+  sendToUser(game.guest_user_id, { type: 'game:update', gameId });
+
+  return res.json({
+    id: game.id,
+    host: { id: game.host_user_id, username: game.host_username },
+    guest: { id: game.guest_user_id, username: game.guest_username },
+    state,
+  });
 });
 
 const server = http.createServer(app);

@@ -38,10 +38,15 @@ export class InviteService {
     );
   }
 
-  async acceptInvite(inviteId: number): Promise<void> {
-    await firstValueFrom(
-      this.http.post(`/api/invites/${inviteId}/accept`, {}, { headers: this.authHeaders() })
+  async acceptInvite(inviteId: number): Promise<{ gameId: number }> {
+    const result = await firstValueFrom(
+      this.http.post<{ gameId: number }>(
+        `/api/invites/${inviteId}/accept`,
+        {},
+        { headers: this.authHeaders() }
+      )
     );
+    return result;
   }
 
   private authHeaders(): HttpHeaders {

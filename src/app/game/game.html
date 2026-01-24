@@ -1,0 +1,155 @@
+<div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 items-start p-6">
+  <aside class="w-full lg:w-72 flex flex-col gap-4">
+    <h2 class="text-2xl font-semibold tracking-tight">Multiplayer</h2>
+
+    <div *ngIf="currentUser && game" class="text-xs text-slate-300 space-y-2">
+      <div class="uppercase tracking-wide text-slate-500">Spiel</div>
+      <div class="text-sm">
+        Du spielst gegen
+        <span class="font-semibold text-slate-100">
+          {{ currentUser.id === game.host.id ? game.guest.username : game.host.username }}
+        </span>
+      </div>
+      <div class="text-[0.7rem] uppercase tracking-wide text-slate-500">
+        Am Zug:
+        <span class="font-semibold text-slate-200">{{ currentPlayerName() }}</span>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button
+        type="button"
+        (click)="goToLocal()"
+        class="px-3 py-1 rounded-full border border-slate-600
+               bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
+               hover:border-slate-300 transition"
+      >
+        Lokal
+      </button>
+      <button
+        type="button"
+        (click)="goToLobby()"
+        class="px-3 py-1 rounded-full border border-slate-600
+               bg-slate-900/90 text-[0.7rem] tracking-[0.16em] uppercase
+               hover:border-slate-300 transition"
+      >
+        Lobby
+      </button>
+    </div>
+
+    <div class="text-sm text-slate-300 space-y-1" *ngIf="game">
+      <div>
+        <span *ngIf="!game.state.globalWinner">
+          Aktueller Spieler:
+          <span class="font-semibold text-emerald-300">
+            {{ currentPlayerName() }}
+          </span>
+        </span>
+
+        <span *ngIf="game.state.globalWinner">
+          Spielende:
+          <span
+            *ngIf="game.state.globalWinner === 'Draw'"
+            class="font-semibold text-amber-300"
+          >
+            Unentschieden
+          </span>
+          <span
+            *ngIf="game.state.globalWinner === 'X' || game.state.globalWinner === 'O'"
+            class="font-semibold text-emerald-300"
+          >
+            {{ winnerName() }} gewinnt!
+          </span>
+        </span>
+      </div>
+
+      <div class="text-[0.7rem] uppercase tracking-wide text-slate-500">
+        <span *ngIf="!game.state.globalWinner">
+          Nächstes Brett:
+          <span class="font-semibold text-slate-200">
+            {{ game.state.nextAllowedBoard === null ? 'Beliebig' : game.state.nextAllowedBoard + 1 }}
+          </span>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex justify-center items-start" *ngIf="game">
+    <div
+      class="bg-slate-950/80 p-4 rounded-3xl border shadow-inner transition"
+      [ngClass]="{
+        'border-emerald-400 shadow-emerald-500/30': isMyTurn(),
+        'border-amber-300 shadow-amber-500/20': !isMyTurn()
+      }"
+      style="
+        width: min(70vw, 80vh);
+        height: min(70vw, 80vh);
+      "
+    >
+      <div class="w-full h-full grid grid-cols-3 gap-3">
+        <div
+          *ngFor="let board of game.state.boards; let bi = index"
+          class="relative rounded-2xl border-2 p-1.5 transition flex flex-col
+                 justify-center aspect-square"
+          [ngClass]="{
+            'border-emerald-400 shadow-lg shadow-emerald-500/30': isBoardActive(bi),
+            'border-slate-700': !isBoardActive(bi),
+            'opacity-40': game.state.boardWinners[bi] && !isBoardActive(bi) && !game.state.globalWinner
+          }"
+        >
+          <div class="grid grid-cols-3 gap-1.5 w-full h-full">
+            <button
+              *ngFor="let cell of board; let ci = index"
+              type="button"
+              class="relative w-full aspect-square rounded-xl border border-slate-700/70
+                     grid place-items-center overflow-hidden
+                     hover:bg-slate-800/80 hover:border-slate-500
+                     transition disabled:opacity-40"
+              [disabled]="
+                !!game.state.globalWinner ||
+                !!game.state.boardWinners[bi] ||
+                cell !== null ||
+                (game.state.nextAllowedBoard !== null && game.state.nextAllowedBoard !== bi) ||
+                !isMyTurn()
+              "
+              (click)="makeMove(bi, ci)"
+            >
+              <span
+                *ngIf="cell"
+                [ngClass]="{
+                  'text-sky-400': cell === 'X',
+                  'text-rose-400': cell === 'O'
+                }"
+              >
+                {{ cell }}
+              </span>
+            </button>
+          </div>
+
+          <div
+            *ngIf="game.state.boardWinners[bi]"
+            class="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <ng-container
+              *ngIf="game.state.boardWinners[bi] === 'X' || game.state.boardWinners[bi] === 'O'; else drawBoard"
+            >
+              <div
+                class="text-xs font-semibold uppercase tracking-wide text-slate-200"
+              >
+                {{ boardWinnerName(game.state.boardWinners[bi]) }}
+              </div>
+            </ng-container>
+
+            <ng-template #drawBoard>
+              <div
+                class="text-xs px-2 py-1 rounded-full bg-slate-900/80 border border-slate-600 text-slate-200"
+              >
+                Unentschieden
+              </div>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
