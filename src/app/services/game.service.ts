@@ -56,6 +56,14 @@ export class GameService {
     return result.games || [];
   }
 
+  async deleteGame(gameId: number): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`/api/games/${gameId}`, {
+        headers: this.authHeaders(),
+      })
+    );
+  }
+
   async makeMove(gameId: number, boardIndex: number, cellIndex: number): Promise<GameResponse> {
     return await firstValueFrom(
       this.http.post<GameResponse>(

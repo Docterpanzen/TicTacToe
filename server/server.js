@@ -508,6 +508,24 @@ app.post('/api/games/:id/move', requireAuth, async (req, res) => {
   });
 });
 
+app.delete('/api/games/:id', requireAuth, async (req, res) => {
+  const gameId = Number(req.params.id);
+  const game = await get(
+    'SELECT id, host_user_id, guest_user_id FROM games WHERE id = ?',
+    [gameId]
+  );
+  if (!game) return res.status(404).json({ error: 'game_not_found' });
+  if (game.host_user_id !== req.userId && game.guest_user_id !== req.userId) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+
+  await run('DELETE FROM games WHERE id = ?', [gameId]);
+  sendToUser(game.host_user_id, { type: 'game:update', gameId });
+  sendToUser(game.guest_user_id, { type: 'game:update', gameId });
+
+  return res.json({ ok: true });
+});
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 

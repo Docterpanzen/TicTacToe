@@ -86,8 +86,9 @@ export class LobbyComponent implements OnInit {
   async accept(invite: Invite): Promise<void> {
     this.busy = true;
     try {
-      const result = await this.inviteService.acceptInvite(invite.id);
-      await this.router.navigateByUrl(`/game/${result.gameId}`);
+      await this.inviteService.acceptInvite(invite.id);
+      await this.loadInvites();
+      await this.loadGames();
     } finally {
       this.busy = false;
     }
@@ -95,6 +96,16 @@ export class LobbyComponent implements OnInit {
 
   async openGame(gameId: number): Promise<void> {
     await this.router.navigateByUrl(`/game/${gameId}`);
+  }
+
+  async deleteGame(gameId: number): Promise<void> {
+    this.busy = true;
+    try {
+      await this.gameService.deleteGame(gameId);
+      await this.loadGames();
+    } finally {
+      this.busy = false;
+    }
   }
 
   async logout(): Promise<void> {

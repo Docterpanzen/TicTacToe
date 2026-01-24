@@ -155,15 +155,28 @@
                   {{ game.updatedAt | date:'short' }}
                 </div>
               </div>
-              <button
-                type="button"
-                (click)="openGame(game.id)"
-                class="px-2.5 py-1 rounded-full border border-emerald-500/70
-                       text-[0.65rem] uppercase tracking-[0.16em]
-                       hover:border-emerald-300 hover:bg-emerald-500/10 transition"
-              >
-                Öffnen
-              </button>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  (click)="deleteGame(game.id)"
+                  class="px-2.5 py-1 rounded-full border border-rose-500/70
+                         text-[0.65rem] uppercase tracking-[0.16em]
+                         hover:border-rose-300 hover:bg-rose-500/10 transition"
+                  [disabled]="busy"
+                >
+                  Löschen
+                </button>
+                <button
+                  type="button"
+                  (click)="openGame(game.id)"
+                  class="px-2.5 py-1 rounded-full border border-emerald-500/70
+                         text-[0.65rem] uppercase tracking-[0.16em]
+                         hover:border-emerald-300 hover:bg-emerald-500/10 transition"
+                  [disabled]="busy"
+                >
+                  Öffnen
+                </button>
+              </div>
             </div>
           </ng-container>
 
