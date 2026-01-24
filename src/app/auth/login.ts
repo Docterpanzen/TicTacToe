@@ -192,6 +192,9 @@ export class LoginComponent {
       if (apiError === 'invalid_credentials') {
         return 'Benutzername oder Passwort ist falsch.';
       }
+      if (apiError === 'admin_only') {
+        return 'Admin bitte über den Admin-Login anmelden.';
+      }
     }
 
     return this.mode === 'register' ? 'Registrierung fehlgeschlagen.' : 'Login fehlgeschlagen.';

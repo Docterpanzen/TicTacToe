@@ -293,10 +293,11 @@ app.post('/api/login', async (req, res) => {
 
   const normalized = String(username).trim().toLowerCase();
   const user = await get(
-    'SELECT id, password_hash FROM users WHERE username = ?',
+    'SELECT id, password_hash, is_admin FROM users WHERE username = ?',
     [normalized]
   );
   if (!user) return res.status(401).json({ error: 'invalid_credentials' });
+  if (user.is_admin) return res.status(403).json({ error: 'admin_only' });
 
   const ok = await bcrypt.compare(String(password), user.password_hash);
   if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
